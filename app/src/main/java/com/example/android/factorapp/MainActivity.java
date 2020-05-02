@@ -25,8 +25,10 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -43,26 +45,62 @@ public class MainActivity extends AppCompatActivity {
     int pos;
     private boolean ans;
     int val;
+    ListView Factorlist;
+    boolean flag1;
+    boolean flag2;
 
+    Button button1;
+    Button button2;
+    TextView txt4;
+    TextView txt7;
+    Set factset = new HashSet();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
-
-        final ListView Factorlist = (ListView) findViewById(R.id.List_of_factors);
-        final Button button1 = (Button) findViewById(R.id.btn);
-        Button button2 = (Button) findViewById(R.id.btn_reset);
-        final TextView txt4 = (TextView) findViewById(R.id.textView4);
+        Factorlist = (ListView) findViewById(R.id.List_of_factors);
+        button1 = (Button) findViewById(R.id.btn);
+        button2 = (Button) findViewById(R.id.btn_reset);
+        txt4 = (TextView) findViewById(R.id.textView4);
         txt4.setText("0");
-
         mtxtview = (TextView) findViewById(R.id.textView6);
         mpreferences = this.getPreferences(Context.MODE_PRIVATE);
         meditor = mpreferences.edit();
 
-        final TextView txt7 = (TextView) findViewById(R.id.textView7);
-        checksharedpref();
+        txt7 = (TextView) findViewById(R.id.textView7);
 
+        flag1= mpreferences.getBoolean("flag1",false);
+        flag2= mpreferences.getBoolean("flag2",false);
+
+
+
+        if(flag1 ){
+
+
+            meditor.putBoolean("flag1",false);
+            meditor.apply();
+            factset= mpreferences.getStringSet("factset",null);
+            fact = new ArrayList<>(factset);
+            flag1= mpreferences.getBoolean("flag1",false);
+            ArrayAdapter adapter = new ArrayAdapter<Integer>(MainActivity.this, android.R.layout.simple_list_item_1, fact);
+            Factorlist.setAdapter(adapter);
+            checkanswer(pos);
+        }
+         if( flag2)
+               {
+                   meditor.putBoolean("flag2",false);
+                   meditor.apply();
+                   flag2=mpreferences.getBoolean("flag2",false);
+            Factorlist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    checkanswer(position);
+                }
+            });
+        }
+        checksharedpref();
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         Factorlist.setVisibility(View.VISIBLE);
         button2.setOnClickListener(new View.OnClickListener() {
@@ -87,6 +125,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
+
+
+
+
         button1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -100,6 +142,10 @@ public class MainActivity extends AppCompatActivity {
 
                 try {
                     val = Integer.parseInt(num);
+                    meditor.putInt("val",val);
+                    meditor.apply();
+                    val= mpreferences.getInt("val",0);
+
                 } catch (NumberFormatException ex) {
                     Toast.makeText(MainActivity.this, "Enter a number", Toast.LENGTH_SHORT).show();
                     button1.setEnabled(true);
@@ -153,52 +199,15 @@ public class MainActivity extends AppCompatActivity {
                     ArrayAdapter adapter = new ArrayAdapter<Integer>(MainActivity.this, android.R.layout.simple_list_item_1, fact);
                     Factorlist.setAdapter(adapter);
 
+                    factset.addAll(fact);
+                    meditor.putStringSet("factset",factset);
+                    meditor.apply();
 
                     Factorlist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                         @Override
                         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
-                            TextView txt4 = (TextView) findViewById(R.id.textView4);
-                            button1.setEnabled(true);
                             pos = position;
-
-                            Factorlist.setEnabled(false);
-                            if (val % fact.get(position) == 0) {
-                                ans = true;
-                                Toast.makeText(MainActivity.this, "Correct", Toast.LENGTH_SHORT).show();
-                                Factorlist.getChildAt(position).setBackgroundColor(Color.GREEN);
-                                score = score + 10;
-                                txt4.setText("" + score);
-                                countDownTimer.cancel();
-                                timerrunning = false;
-                                txt7.setText("");
-                                if (score > mpreferences.getInt("hiscore", 0)) {
-                                    meditor.putInt("hiscore", score);
-                                    meditor.apply();
-                                    int hiscore = mpreferences.getInt("hiscore", 0);
-                                    mtxtview.setText("" + hiscore);
-                                }
-
-
-                            } else {
-                                ans = false;
-                                vibrator.vibrate(300);
-                                for (int i = 0; i <= 2; i++) {
-                                    if (val % fact.get(i) == 0) {
-                                        Toast.makeText(MainActivity.this, "Incorrect! Game Over", Toast.LENGTH_SHORT).show();
-                                        Factorlist.getChildAt(i).setBackgroundColor(Color.GREEN);
-                                        Factorlist.getChildAt(position).setBackgroundColor(Color.RED);
-                                    }
-
-                                    score = 0;
-                                    txt4.setText("" + score);
-                                    countDownTimer.cancel();
-                                    timerrunning = false;
-                                    txt7.setText("Game Over!!!");
-
-
-                                }
-                            }
+                            checkanswer(pos);
                         }
                     });
 
@@ -210,6 +219,73 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+    private void checkanswer(int pos)
+    {
+
+
+        button1.setEnabled(true);
+
+
+        Factorlist.setEnabled(false);
+        if (val % fact.get(pos) == 0) {
+            ans = true;
+            Toast.makeText(MainActivity.this, "Correct", Toast.LENGTH_SHORT).show();
+            Factorlist.getChildAt(pos).setBackgroundColor(Color.GREEN);
+            score = score + 10;
+            txt4.setText("" + score);
+            countDownTimer.cancel();
+            timerrunning = false;
+            txt7.setText("");
+            if (score > mpreferences.getInt("hiscore", 0)) {
+                meditor.putInt("hiscore", score);
+                meditor.apply();
+                int hiscore = mpreferences.getInt("hiscore", 0);
+                mtxtview.setText("" + hiscore);
+            }
+
+
+        } else {
+            ans = false;
+            vibrator.vibrate(300);
+            for (int i = 0; i <= 2; i++) {
+                if (val % fact.get(i) == 0) {
+                    Toast.makeText(MainActivity.this, "Incorrect! Game Over", Toast.LENGTH_SHORT).show();
+                    Factorlist.getChildAt(i).setBackgroundColor(Color.GREEN);
+                    Factorlist.getChildAt(pos).setBackgroundColor(Color.RED);
+                }
+
+                score = 0;
+                txt4.setText("" + score);
+                countDownTimer.cancel();
+                timerrunning = false;
+                txt7.setText("Game Over!!!");
+
+
+            }
+        }
+
+
+    }
+
+    private void setcolour()
+    {
+        Factorlist.setEnabled(false);
+
+        if (ans) {
+            Factorlist.getChildAt(pos).setBackgroundColor(Color.GREEN);
+        }
+        else {
+            Factorlist.getChildAt(pos).setBackgroundColor(Color.RED);
+            for (int i = 0; i <= 2; i++) {
+                if (val % fact.get(i) == 0) {
+                    Factorlist.getChildAt(i).setBackgroundColor(Color.GREEN);
+
+                }
+
+            }
+        }
+    }
 
     private void startTimer() {
 
@@ -230,6 +306,8 @@ public class MainActivity extends AppCompatActivity {
                 vibrator.vibrate(300);
                 txt7.setText("Time Up, Game Over!!");
                 if (score > mpreferences.getInt("hiscore", 0)) {
+
+
                     meditor.putInt("hiscore", score);
                     meditor.apply();
                     int hiscore = mpreferences.getInt("hiscore", 0);
@@ -250,29 +328,19 @@ public class MainActivity extends AppCompatActivity {
         }.start();
     }
 
-    private void setcolour(ListView Factorlist)
-    {
 
-        if (ans) {
-            Factorlist.getChildAt(pos).setBackgroundColor(Color.GREEN);
-        }
-        else {
-            Factorlist.getChildAt(pos).setBackgroundColor(Color.RED);
-            for (int i = 0; i <= 2; i++) {
-                if (val % fact.get(i) == 0) {
-                    Factorlist.getChildAt(i).setBackgroundColor(Color.GREEN);
-
-                }
-
-            }
-        }
-    }
 
 
     private void checksharedpref() {
 
         int hiscore = mpreferences.getInt("hiscore", 0);
         mtxtview.setText("" + hiscore);
+
+        flag1= mpreferences.getBoolean("flag1",false);
+        flag2=mpreferences.getBoolean("flag2",false);
+        val= mpreferences.getInt("val",0);
+
+
     }
 
     @Override
@@ -286,19 +354,31 @@ public class MainActivity extends AppCompatActivity {
         outState.putInt("pos", pos);
         outState.putInt("val", val);
 
+        if (timerrunning) {
+            meditor.putBoolean("flag2",true);
+            meditor.apply();
+            flag2= mpreferences.getBoolean("flag2",false);
+
+        } else {
+            meditor.putBoolean("flag1",true);
+            meditor.apply();
+            flag1= mpreferences.getBoolean("flag1",false);
+        }
+
+
 
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
+
         ans = savedInstanceState.getBoolean("ans");
         pos = savedInstanceState.getInt("pos");
         TextView txt4 = (TextView) findViewById(R.id.textView4);
         fact.clear();
         fact = savedInstanceState.getIntegerArrayList("fact");
-        final ListView Factorlist = (ListView) findViewById(R.id.List_of_factors);
-
+        val= savedInstanceState.getInt("val");
         timeleft = savedInstanceState.getLong("timeleft");
         score = savedInstanceState.getInt("score");
         timerrunning = savedInstanceState.getBoolean("timerrunning");
@@ -308,13 +388,15 @@ public class MainActivity extends AppCompatActivity {
             button1.setEnabled(false);
             startTimer();
 
-        } else
-            button1.setEnabled(true);
-        ArrayAdapter adapter = new ArrayAdapter<Integer>(MainActivity.this, android.R.layout.simple_list_item_1, fact);
-            Factorlist.setAdapter(adapter);
-          setcolour(Factorlist);
-        }
 
+        } else {
+            button1.setEnabled(true);
+
+        }
+        ArrayAdapter adapter = new ArrayAdapter<Integer>(MainActivity.this, android.R.layout.simple_list_item_1, fact);
+        Factorlist.setAdapter(adapter);
+
+        }
 
     }
 
